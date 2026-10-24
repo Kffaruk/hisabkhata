@@ -1,0 +1,20 @@
+name: hisab_khata
+description: অফলাইন হিসাব খাতা (কাস্টমার/সাপ্লায়ার লেনদেন) ক্লাউড ব্যাকআপ সহ
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  sqflite: ^2.3.3
+  path: ^1.9.0
+  uuid: ^4.4.0
+  shared_preferences: ^2.2.3
+  connectivity_plus: ^6.0.3
+  supabase_flutter: ^2.5.6
+
+flutter:
+  uses-material-design: true
