@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:fast_contacts/fast_contacts.dart' as fc;
+import 'package:flutter_contacts/flutter_contacts.dart' show FlutterContacts;
 
 import 'utils.dart';
 
@@ -33,7 +34,15 @@ Future<void> _info(BuildContext context, String title, String body) {
 }
 
 /// ফোনবুক খুলে একটা কন্টাক্ট বেছে নেওয়ার ডায়ালগ। প্রতিটি নম্বর আলাদা সারিতে দেখায়।
+List<PickedContact>? _cache; // একবার পড়লে মনে রাখে, পরেরবার সাথে সাথে খোলে
+
 Future<PickedContact?> pickContact(BuildContext context) async {
+  if (_cache != null && _cache!.isNotEmpty) {
+    return showDialog<PickedContact>(
+      context: context,
+      builder: (_) => _ContactDialog(_cache!),
+    );
+  }
   // অনুমতি চাই। ফলাফলের true/false-এর উপর ভরসা না করে সরাসরি কন্টাক্ট পড়ার চেষ্টা করি,
   // কারণ কিছু ফোনে অনুমতি দেওয়ার পরও এই মান ভুল আসে।
   try {
@@ -48,11 +57,11 @@ Future<PickedContact?> pickContact(BuildContext context) async {
     builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.white)),
   );
 
-  List<Contact>? contacts;
+  List<fc.Contact>? contacts;
   Object? error;
   try {
-    contacts = await FlutterContacts.getContacts(withProperties: true, withPhoto: false)
-        .timeout(const Duration(seconds: 40));
+    // fast_contacts শুধু নাম ও নম্বর পড়ে, তাই হাজার কন্টাক্টেও কয়েক সেকেন্ডে শেষ হয়।
+    contacts = await fc.FastContacts.getAllContacts().timeout(const Duration(seconds: 40));
   } catch (e) {
     error = e;
   }
@@ -79,6 +88,7 @@ Future<PickedContact?> pickContact(BuildContext context) async {
     }
   }
   entries.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  _cache = entries;
 
   if (entries.isEmpty) {
     if (!context.mounted) return null;

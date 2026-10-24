@@ -224,12 +224,9 @@ class _TallyPageState extends State<TallyPage> {
             foregroundColor: Colors.white,
             shape: const CircleBorder(),
             onPressed: () async {
-              final id = await Navigator.push<String>(context,
+              // নিশ্চিত করার পর ফর্ম বন্ধ হয়ে সরাসরি ড্যাশবোর্ডে ফিরে আসে
+              await Navigator.push<String>(context,
                   MaterialPageRoute(builder: (_) => const PartyFormPage()));
-              if (id != null && context.mounted) {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => PartyPage(partyId: id)));
-              }
             },
             child: const Icon(Icons.person_add_alt_1),
           ),
