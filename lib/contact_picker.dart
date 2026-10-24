@@ -19,26 +19,54 @@ String _normalize(String raw) {
   return p;
 }
 
+Future<void> _info(BuildContext context, String title, String body) {
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(title),
+      content: Text(body),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ঠিক আছে')),
+      ],
+    ),
+  );
+}
+
 /// ফোনবুক খুলে একটা কন্টাক্ট বেছে নেওয়ার ডায়ালগ। প্রতিটি নম্বর আলাদা সারিতে দেখায়।
 Future<PickedContact?> pickContact(BuildContext context) async {
-  final messenger = ScaffoldMessenger.of(context);
-  bool granted;
+  // অনুমতি চাই। ফলাফলের true/false-এর উপর ভরসা না করে সরাসরি কন্টাক্ট পড়ার চেষ্টা করি,
+  // কারণ কিছু ফোনে অনুমতি দেওয়ার পরও এই মান ভুল আসে।
   try {
-    granted = await FlutterContacts.requestPermission(readonly: true);
-  } catch (_) {
-    granted = false;
-  }
-  if (!granted) {
-    messenger.showSnackBar(const SnackBar(
-        content: Text('ফোনবুক দেখার অনুমতি দেওয়া হয়নি। ফোনের Settings থেকে অনুমতি দিন।')));
-    return null;
+    await FlutterContacts.requestPermission(readonly: true);
+  } catch (_) {}
+  if (!context.mounted) return null;
+
+  // লোডিং দেখাই (কন্টাক্ট বেশি থাকলে কয়েক সেকেন্ড লাগতে পারে)
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+  );
+
+  List<Contact>? contacts;
+  Object? error;
+  try {
+    contacts = await FlutterContacts.getContacts(withProperties: true, withPhoto: false)
+        .timeout(const Duration(seconds: 40));
+  } catch (e) {
+    error = e;
   }
 
-  List<Contact> contacts;
-  try {
-    contacts = await FlutterContacts.getContacts(withProperties: true, withPhoto: false);
-  } catch (_) {
-    messenger.showSnackBar(const SnackBar(content: Text('ফোনবুক পড়া যায়নি')));
+  if (!context.mounted) return null;
+  Navigator.of(context, rootNavigator: true).pop(); // লোডিং বন্ধ
+
+  if (contacts == null) {
+    await _info(
+      context,
+      'ফোনবুক পড়া যায়নি',
+      'ফোনের Settings > Apps > হিসাব খাতা > Permissions > Contacts এ "Allow" দিন, '
+          'তারপর আবার চেষ্টা করুন।\n\nকারিগরি তথ্য: $error',
+    );
     return null;
   }
 
@@ -51,6 +79,17 @@ Future<PickedContact?> pickContact(BuildContext context) async {
     }
   }
   entries.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+  if (entries.isEmpty) {
+    if (!context.mounted) return null;
+    await _info(
+      context,
+      'কোনো নম্বর পাওয়া যায়নি',
+      'ফোনবুকে কোনো নম্বর পাওয়া যায়নি, অথবা অনুমতি দেওয়া হয়নি। '
+          'Settings > Apps > হিসাব খাতা > Permissions > Contacts এ "Allow" আছে কিনা দেখুন।',
+    );
+    return null;
+  }
 
   if (!context.mounted) return null;
   return showDialog<PickedContact>(
@@ -72,11 +111,12 @@ class _ContactDialogState extends State<_ContactDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final s = q.toLowerCase();
-    final list = q.isEmpty
+    final s = q.trim().toLowerCase();
+    final digits = toAscii(s);
+    final list = s.isEmpty
         ? widget.all
         : widget.all
-            .where((e) => e.name.toLowerCase().contains(s) || e.phone.contains(s))
+            .where((e) => e.name.toLowerCase().contains(s) || e.phone.contains(digits))
             .toList();
     return Dialog(
       backgroundColor: Colors.white,
@@ -87,7 +127,6 @@ class _ContactDialogState extends State<_ContactDialog> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
-              autofocus: false,
               onChanged: (v) => setState(() => q = v),
               decoration: InputDecoration(
                 hintText: 'খোঁজ',

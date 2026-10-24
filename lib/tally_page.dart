@@ -30,8 +30,10 @@ class _TallyPageState extends State<TallyPage> {
         if (fSupplier && !v.party.isSupplier) return false;
       }
       if (q.isNotEmpty) {
-        final s = q.toLowerCase();
-        return v.party.name.toLowerCase().contains(s) || v.party.phone.contains(s);
+        final s = q.trim().toLowerCase();
+        final digits = toAscii(s);
+        return v.party.name.toLowerCase().contains(s) ||
+            v.party.phone.contains(digits);
       }
       return true;
     }).toList();
@@ -359,9 +361,10 @@ class _TallyPageState extends State<TallyPage> {
 
   Widget _row(PartyView v) {
     final bal = v.balance;
-    final sub = v.party.isSupplier
+    final base = v.party.isSupplier
         ? 'সাপ্লায়ার | ${ago(v.lastActivity)}'
         : ago(v.lastActivity);
+    final sub = v.party.phone.isEmpty ? base : '$base | ${bn(v.party.phone)}';
     return InkWell(
       onTap: () => Navigator.push(context,
           MaterialPageRoute(builder: (_) => PartyPage(partyId: v.party.id))),
@@ -376,7 +379,10 @@ class _TallyPageState extends State<TallyPage> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
-              Text(sub, style: const TextStyle(color: Colors.black54)),
+              Text(sub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.black54)),
             ]),
           ),
           Text(money(bal),

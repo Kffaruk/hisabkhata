@@ -28,6 +28,15 @@ String money(double v) {
   return bn('${_group(parts[0])}.${parts[1]}');
 }
 
+/// বাংলা সংখ্যাকে ইংরেজি সংখ্যায় বদলায় (খোঁজার সময় কাজে লাগে)।
+String toAscii(String s) {
+  var t = s;
+  for (var i = 0; i < 10; i++) {
+    t = t.replaceAll(_bnDigits[i], '$i');
+  }
+  return t;
+}
+
 /// কীবোর্ডের ইংরেজি বা বাংলা দুই ধরনের সংখ্যাই পড়ে।
 double parseAmount(String s) {
   var t = s.trim().replaceAll(',', '');
