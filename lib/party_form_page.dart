@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'contact_picker.dart';
 import 'repo.dart';
 import 'utils.dart';
 
@@ -65,6 +66,27 @@ class _PartyFormPageState extends State<PartyFormPage> {
               const SizedBox(width: 12),
               _typeBox('supplier', 'সাপ্লায়ার'),
             ]),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: kGrey,
+                  foregroundColor: Colors.black87,
+                  shape: const StadiumBorder(),
+                ),
+                onPressed: () async {
+                  final c = await pickContact(context);
+                  if (c != null) {
+                    name.text = c.name;
+                    phone.text = c.phone;
+                  }
+                },
+                icon: const Icon(Icons.contact_phone_outlined),
+                label: const Text('ফোনবুক থেকে যোগ করি', style: TextStyle(fontSize: 17)),
+              ),
+            ),
             const SizedBox(height: 24),
             TextField(
               controller: name,
