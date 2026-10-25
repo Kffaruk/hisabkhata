@@ -4,7 +4,11 @@ import 'contact_picker.dart';
 import 'repo.dart';
 import 'utils.dart';
 
-/// নতুন কাস্টমার/সাপ্লায়ার যোগ। চাইলে "পূর্বের বাকি (জের)" দিয়ে শুরুর হিসাবও বসানো যায়।
+/// নতুন কাস্টমার/সাপ্লায়ার যোগ।
+/// - নাম না থাকলে (শুধু নম্বর দিলেও) "পূর্বের বাকি" ঘর আসে না এবং নিশ্চিত হয় না।
+/// - নাম থাকলে (ফোনবুক থেকে নিলে বা হাতে লিখলে) "পূর্বের বাকি (জের)" ঘর আসে।
+///   নম্বর না দিলেও নিশ্চিত করা যায়।
+/// - কাস্টমারের জের = পাবো, সাপ্লায়ারের জের = দেবো।
 class PartyFormPage extends StatefulWidget {
   const PartyFormPage({super.key});
 
@@ -18,17 +22,15 @@ class _PartyFormPageState extends State<PartyFormPage> {
   final phone = TextEditingController();
   final opening = TextEditingController();
   DateTime date = DateTime.now();
+  bool saving = false;
 
-  /// true = পাবো (সে আমাকে দেবে), false = দেবো (আমি তাকে দেবো), null = টাইপ অনুযায়ী নিজে ঠিক হবে
-  bool? chosenReceivable;
-
-  bool get receivable => chosenReceivable ?? (type == 'customer');
+  bool get hasName => name.text.trim().isNotEmpty;
+  bool get receivable => type == 'customer';
 
   @override
   void initState() {
     super.initState();
     name.addListener(() => setState(() {}));
-    opening.addListener(() => setState(() {}));
   }
 
   @override
@@ -62,28 +64,6 @@ class _PartyFormPageState extends State<PartyFormPage> {
     );
   }
 
-  Widget _dirChip(String label, bool value, Color color) {
-    final sel = receivable == value;
-    return Expanded(
-      child: InkWell(
-        onTap: () => setState(() => chosenReceivable = value),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: sel ? color : kGrey,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(label,
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: sel ? Colors.white : Colors.black87)),
-        ),
-      ),
-    );
-  }
-
   Future<void> _pickDate() async {
     final d = await showDatePicker(
       context: context,
@@ -95,6 +75,8 @@ class _PartyFormPageState extends State<PartyFormPage> {
   }
 
   Future<void> _save() async {
+    if (!hasName || saving) return;
+    setState(() => saving = true);
     final id = await Repo.i.addParty(type, name.text, phone.text);
     final amount = parseAmount(opening.text);
     if (amount > 0) {
@@ -113,7 +95,6 @@ class _PartyFormPageState extends State<PartyFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final hasAmount = parseAmount(opening.text) > 0;
     return Scaffold(
       appBar: AppBar(title: const Text('নতুন কাস্টমার/সাপ্লায়ার')),
       body: SafeArea(
@@ -166,45 +147,40 @@ class _PartyFormPageState extends State<PartyFormPage> {
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: opening,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                prefixIcon: Padding(
-                  padding: EdgeInsets.all(14),
-                  child: Text('৳', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            // নাম থাকলে তবেই "পূর্বের বাকি" ও তারিখ দেখায়
+            if (hasName) ...[
+              const SizedBox(height: 20),
+              TextField(
+                controller: opening,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  prefixIcon: Padding(
+                    padding: EdgeInsets.all(14),
+                    child: Text('৳', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  ),
+                  labelText: 'পূর্বের বাকি (জের)',
+                  border: OutlineInputBorder(),
                 ),
-                labelText: 'পূর্বের বাকি (জের)',
-                border: OutlineInputBorder(),
               ),
-            ),
-            if (hasAmount) ...[
-              const SizedBox(height: 12),
-              Row(children: [
-                _dirChip('পাবো (সে আমাকে দেবে)', true, kDebit),
-                const SizedBox(width: 10),
-                _dirChip('দেবো (আমি তাকে দেবো)', false, kGreen),
-              ]),
+              const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ActionChip(
+                  avatar: const Icon(Icons.calendar_month_outlined, size: 20),
+                  label: Text(dateShort(date)),
+                  backgroundColor: const Color(0xFFF2F4F9),
+                  shape: const StadiumBorder(),
+                  onPressed: _pickDate,
+                ),
+              ),
             ],
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ActionChip(
-                avatar: const Icon(Icons.calendar_month_outlined, size: 20),
-                label: Text(dateShort(date)),
-                backgroundColor: const Color(0xFFF2F4F9),
-                shape: const StadiumBorder(),
-                onPressed: _pickDate,
-              ),
-            ),
           ]),
         ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: BigButton('নিশ্চিত', onTap: name.text.trim().isEmpty ? null : _save),
+          child: BigButton('নিশ্চিত', onTap: hasName && !saving ? _save : null),
         ),
       ),
     );
