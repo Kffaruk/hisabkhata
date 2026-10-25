@@ -19,6 +19,7 @@ class _PartyPageState extends State<PartyPage> {
   final got = TextEditingController();
   final note = TextEditingController();
   DateTime date = DateTime.now();
+  bool saving = false;
 
   bool get valid => parseAmount(gave.text) > 0 || parseAmount(got.text) > 0;
 
@@ -62,9 +63,17 @@ class _PartyPageState extends State<PartyPage> {
     note.clear();
     FocusManager.instance.primaryFocus?.unfocus();
     if (!mounted) return;
-    setState(() => date = DateTime.now());
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('লেনদেন সংরক্ষিত হয়েছে')));
+    setState(() {
+      date = DateTime.now();
+      saving = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('লেনদেন সংরক্ষিত হয়েছে'),
+      duration: Duration(seconds: 2),
+    ));
+    // ১ সেকেন্ড বার্তা দেখিয়ে নিজে থেকে ড্যাশবোর্ডে ফিরে যায়
+    await Future.delayed(const Duration(seconds: 1));
+    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _editParty(Party p) async {
@@ -226,7 +235,7 @@ class _PartyPageState extends State<PartyPage> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: BigButton('নিশ্চিত', onTap: valid ? _save : null),
+                child: BigButton('নিশ্চিত', onTap: valid && !saving ? _save : null),
               ),
             ]),
           ),
